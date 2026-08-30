@@ -1,0 +1,37 @@
+# SaveMySaves English language file
+# Keys mirror src/main/resources/assets/savemysaves/lang/zh_CN.lang
+
+# --- Chat / command messages ---
+# Starting message is split per trigger reason (scheduled / manual), no nested components
+savemysaves.chat.starting.scheduled=§6[SaveMySaves] §eScheduled auto-backup starting...
+savemysaves.chat.starting.manual=§6[SaveMySaves] §eManual backup starting...
+savemysaves.chat.finished=§6[SaveMySaves] §aBackup complete: §f%s
+savemysaves.chat.failed=§6[SaveMySaves] §cBackup failed: %s
+savemysaves.chat.disabled=§cBackups are disabled (set enabled=false in savemysaves.cfg)
+savemysaves.chat.noWorld=§cNo world is currently loaded, cannot backup.
+savemysaves.chat.requested=§aImmediate backup requested, check chat for the result.
+savemysaves.chat.usage=§cUsage: %s
+
+# --- Status output ---
+savemysaves.status.title=§6[SaveMySaves] Status
+savemysaves.status.enabled=§7Enabled: §f%s
+savemysaves.status.interval=§7Interval: §f%s min
+savemysaves.status.maxBackups=§7Max backups kept: §f%s
+savemysaves.status.world=§7Current world: §f%s
+savemysaves.status.noWorld=§7Current world: §cNone (not in a world)
+savemysaves.status.backupCount=§7Backups: §f%s / %s
+savemysaves.status.backupDir=§7Backup directory: §f%s
+savemysaves.status.lastBackup=§7Last backup: §f%s
+
+# --- Config (config GUI names/comments; one-to-one with config/savemysaves.cfg keys) ---
+config.savemysaves.general=General
+config.savemysaves.general.enabled=Enabled
+config.savemysaves.general.enabled.comment=Whether automatic scheduled backups are enabled
+config.savemysaves.general.intervalMinutes=Backup interval
+config.savemysaves.general.intervalMinutes.comment=Automatic backup interval (minutes). Minimum 1, maximum 1440
+config.savemysaves.general.maxBackups=Max backups kept
+config.savemysaves.general.maxBackups.comment=Maximum number of backups to keep (oldest are rolled out). Minimum 1
+config.savemysaves.general.backupDirName=Backup directory name
+config.savemysaves.general.backupDirName.comment=Name of the backup directory, relative to the world folder (start with an underscore so MC does not treat it as a save)
+config.savemysaves.general.language=Message language
+config.savemysaves.general.language.comment=Language for chat/command messages (rendered server-side, identical for all clients): zh_CN Simplified Chinese, en_US English
