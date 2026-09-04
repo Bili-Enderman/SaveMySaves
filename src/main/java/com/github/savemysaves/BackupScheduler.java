@@ -2,7 +2,7 @@ package com.github.savemysaves;
 
 import net.minecraft.Util;
 import net.minecraft.network.chat.ChatType;
-import net.minecraft.network.chat.StringTextComponent;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.fml.server.ServerLifecycleHooks;
 
@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 备份调度器：单例，独立后台线程（逻辑与 1.12.2 一致：定时 + 立即 + 滚动删除）。
  * 1.16.5 差异：
  *   - FMLCommonHandler.getMinecraftServerInstance() → ServerLifecycleHooks.getCurrentServer()
- *   - TextComponentString → StringTextComponent（official 映射）
+ *   - TextComponentString → TextComponent（official 映射，1.16.5 字面文本组件为 TextComponent）
  *   - 群发消息走 PlayerList.broadcastMessage(Component, ChatType, UUID)
  */
 public enum BackupScheduler {
@@ -168,8 +168,8 @@ public enum BackupScheduler {
     }
 
     /** 把语言键 + 参数格式化成纯文本组件（服务端语言包，见 Lang）。 */
-    static StringTextComponent text(String key, Object... args) {
-        return new StringTextComponent(Lang.t(key, args));
+    static TextComponent text(String key, Object... args) {
+        return new TextComponent(Lang.t(key, args));
     }
 
     static void log(String msg) {

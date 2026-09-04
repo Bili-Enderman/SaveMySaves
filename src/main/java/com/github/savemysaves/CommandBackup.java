@@ -4,7 +4,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.StringTextComponent;
+import net.minecraft.network.chat.TextComponent;
 
 import java.io.File;
 
@@ -87,7 +87,7 @@ public class CommandBackup {
         }
         // 多行输出按行拆分逐条发送（聊天组件不渲染 \n）
         for (String line : sb.toString().split("\n")) {
-            source.sendSuccess(new StringTextComponent(line), false);
+            source.sendSuccess(new TextComponent(line), false);
         }
     }
 }

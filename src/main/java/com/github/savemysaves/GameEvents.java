@@ -45,7 +45,7 @@ public class GameEvents {
     @SubscribeEvent
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (FMLEnvironment.dist != Dist.CLIENT) return;
-        if (event.player != null && !event.player.level.isClientSide) {
+        if (event.getPlayer() != null && !event.getPlayer().level.isClientSide) {
             SaveMySaves.currentWorldDir = null;
             SaveMySaves.inGameWorld = false;
         }
