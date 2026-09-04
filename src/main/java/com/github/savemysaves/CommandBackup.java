@@ -73,7 +73,11 @@ public class CommandBackup extends CommandBase {
             } else {
                 sb.append(Lang.t("savemysaves.status.noWorld"));
             }
-            send(sender, new ChatComponentText(sb.toString()));
+            // 本版本差异（1.7.10）：聊天组件不会把 \n 渲染成换行，而是画成 "LF" 字形方框（1.12.2 才支持），
+            // 因此把状态文本按行拆成多条消息逐条发送
+            for (String line : sb.toString().split("\n")) {
+                send(sender, new ChatComponentText(line));
+            }
         } else {
             send(sender, "savemysaves.chat.usage", getCommandUsage(sender));
         }
