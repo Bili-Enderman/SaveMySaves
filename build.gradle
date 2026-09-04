@@ -1,50 +1,52 @@
 buildscript {
     repositories {
         mavenCentral()
-        maven { url = "https://maven.minecraftforge.net" }
-        maven { url = "https://files.minecraftforge.net/maven" }
+        // ForgeGradle 1.2 与 Forge/MCP 构件；files.minecraftforge.net 会重定向到 maven.minecraftforge.net
+        maven { name = "forge"; url = "http://files.minecraftforge.net/maven" }
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3.7'
+        classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
     }
 }
 
-apply plugin: 'net.minecraftforge.gradle.forge'
+apply plugin: 'forge'
 
-// Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
-version = "1.0.0"
+// 版本号：mod名 + mc版本 + mod版本（见 .MCMOD.runtime.txt）
+version = "1710-1.0.0"
 group = "com.github.savemysaves"
 archivesBaseName = "savemysaves"
 
-sourceCompatibility = targetCompatibility = '1.8'
-compileJava {
-    sourceCompatibility = '1.8'
-    targetCompatibility = '1.8'
-    options.encoding = 'UTF-8'
-}
-
 minecraft {
-    version = "1.12.2-14.23.5.2847"
+    version = "1.7.10-10.13.4.1614-1.7.10"
     runDir = "run"
-    mappings = "snapshot_20171003"
-    makeObfSourceJar = false
-}
-
-dependencies {
-    // 本 Mod 仅使用 Forge 提供的 API，无需额外依赖
+    // 1.7.10 可用的最新 MCP snapshot 映射
+    mappings = "snapshot_20140925"
 }
 
 processResources {
-    filteringCharset = 'UTF-8'
-    inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
+    // 注意：Gradle 2.x 的 expand 过滤用系统默认编码（本机 GBK），会把 mcmod.info 的中文描述写成乱码。
+    // mcmod.info 中版本号为字面量、无 ${} 占位符，故不做任何过滤，原样字节复制。
+    // 版本变更时直接改 mcmod.info。
+}
 
-    from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-        expand 'version': project.version, 'mcversion': project.minecraft.version
+// ---- 旧版 Mojang S3 下载源（s3.amazonaws.com/Minecraft.Download）已关闭 ----
+// ForgeGradle 1.2 的 downloadClient/downloadServer 仍指向它且必定失败。
+// 客户端/服务端 jar 已手动放到 FG 缓存路径（~/.gradle/caches/minecraft/net/minecraft/minecraft/1.7.10/），
+// 直接跳过这两个下载任务即可（后续任务读缓存文件）。
+afterEvaluate {
+    ['downloadClient', 'downloadServer'].each { name ->
+        def t = tasks.findByName(name)
+        if (t != null) t.enabled = false
     }
+}
 
-    from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
-    }
+// 编译兼容性（JDK8 编译，1.7.10 运行无碍）
+compileJava {
+    sourceCompatibility = "1.8"
+    targetCompatibility = "1.8"
+}
+
+// 确保使用 UTF-8（中文注释在 GBK 默认编码下会连锁报"找不到符号"）
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
 }

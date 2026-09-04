@@ -1,10 +1,11 @@
 package com.github.savemysaves;
 
-import net.minecraftforge.fml.common.FMLCommonHandler;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.gameevent.PlayerEvent;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
-import net.minecraftforge.fml.relauncher.Side;
+// 本版本差异（1.7.10）：FML 类在 cpw.mods.fml 包下
+import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.PlayerEvent;
+import cpw.mods.fml.common.gameevent.TickEvent;
+import cpw.mods.fml.relauncher.Side;
 
 import java.io.File;
 
@@ -26,8 +27,10 @@ public class CommonProxy {
     }
 
     public void init(SaveMySaves mod) {
-        // 注册自身到 Forge 事件总线
+        // 本版本差异（1.7.10）：事件总线未合并（1.8 起 FMLCommonHandler.bus() 并入主总线），
+        // 游戏事件（TickEvent/PlayerEvent 等）挂在 FML 总线，必须两条总线都注册
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);
+        FMLCommonHandler.instance().bus().register(this);
     }
 
     /** 每个世界 tick 触发（服务端 world）。在这里拿到世界的存档目录。 */
@@ -53,7 +56,7 @@ public class CommonProxy {
     @SubscribeEvent
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (FMLCommonHandler.instance().getSide() != Side.CLIENT) return;
-        if (event.player != null && !event.player.world.isRemote) {
+        if (event.player != null && !event.player.worldObj.isRemote) {
             SaveMySaves.currentWorldDir = null;
             SaveMySaves.inGameWorld = false;
         }

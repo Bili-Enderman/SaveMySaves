@@ -1,9 +1,11 @@
 package com.github.savemysaves;
 
+// 本版本差异（1.7.10）：聊天组件为 ChatComponentText/IChatComponent；
+// FMLCommonHandler 在 cpw.mods.fml 包下；玩家列表消息走 getConfigurationManager().sendChatMsg
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraftforge.fml.common.FMLCommonHandler;
+import net.minecraft.util.IChatComponent;
+import net.minecraft.util.ChatComponentText;
+import cpw.mods.fml.common.FMLCommonHandler;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -164,14 +166,14 @@ public enum BackupScheduler {
         try {
             MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
             if (server != null) {
-                server.getPlayerList().sendMessage(text(key, args));
+                server.getConfigurationManager().sendChatMsg(text(key, args));
             }
         } catch (Exception ignored) {}
     }
 
     /** 把语言键 + 参数格式化成纯文本组件（服务端语言包，见 Lang）。 */
-    static ITextComponent text(String key, Object... args) {
-        return new TextComponentString(Lang.t(key, args));
+    static IChatComponent text(String key, Object... args) {
+        return new ChatComponentText(Lang.t(key, args));
     }
 
     static void log(String msg) {

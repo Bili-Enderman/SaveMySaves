@@ -1,11 +1,12 @@
 package com.github.savemysaves;
 
 import net.minecraftforge.common.config.Configuration;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.SidedProxy;
-import net.minecraftforge.fml.common.event.*;
-import net.minecraftforge.fml.common.network.NetworkCheckHandler;
-import net.minecraftforge.fml.relauncher.Side;
+// 本版本差异（1.7.10）：FML 类还在 cpw.mods.fml 包下（1.8 才迁移到 net.minecraftforge.fml）
+import cpw.mods.fml.common.Mod;
+import cpw.mods.fml.common.SidedProxy;
+import cpw.mods.fml.common.event.*;
+import cpw.mods.fml.common.network.NetworkCheckHandler;
+import cpw.mods.fml.relauncher.Side;
 
 import java.io.File;
 import java.util.Map;

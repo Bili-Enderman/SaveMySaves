@@ -1,6 +1,8 @@
-# SaveMySaves —— MC 1.12.2 自动备份 Mod（仅源码）
+# SaveMySaves —— MC 1.7.10 自动备份 Mod（仅源码）
 
 > 在游玩某个存档时，每隔一段时间自动把该存档压缩成 `.zip` 放到备份目录；滚动保留最多 N 份；可通过命令立即备份、查看状态。
+
+> **分支说明（mc1710）**：由 `main`（1.12.2）移植。1.7.10 特有差异：FML 类在 `cpw.mods.fml.*` 包下；事件总线未合并，游戏事件需同时注册 `MinecraftForge.EVENT_BUS` 与 `FMLCommonHandler.instance().bus()`；命令 API 为 `getCommandName/getCommandUsage/processCommand(sender, args)`；聊天组件为 `ChatComponentText/IChatComponent`。
 
 ## 功能
 - ✅ **定时备份**：进入世界后，每隔 `intervalMinutes` 分钟自动备份当前正在游玩的存档
@@ -11,25 +13,24 @@
 - ✅ **CFG 配置**：`config/savemysaves.cfg`，支持热读（重启生效）
 
 ## 环境
-- Minecraft 1.12.2
-- Forge 1.12.2 (14.23.5.2847，构建/测试所用版本)
-- **JDK 8**（必须，u202+）
-- Gradle 4.10.3（项目已带 wrapper 配置）
+- Minecraft 1.7.10
+- Forge 1.7.10 (10.13.4.1614，构建所用版本)
+- **JDK 8**
+- Gradle 2.14.1（ForgeGradle 1.2 要求 Gradle 2.x，wrapper 已指向腾讯镜像）
 
 ## 构建
 ```bash
-# 1. 生成 IDE 运行配置（首次）
-gradlew setupDecompWorkspace
-gradlew genIntellijRuns      # IDEA
-# 或 gradlew eclipse         # Eclipse
+# ForgeGradle 1.2 的 downloadClient/downloadServer 指向已关闭的 Mojang S3，
+# build.gradle 已用 afterEvaluate 跳过；原版 jar 预置于
+# ~/.gradle/caches/minecraft/net/minecraft/minecraft/1.7.10/minecraft-1.7.10.jar
 
 # 2. 构建 jar
 gradlew build
-# 产物：build/libs/savemysaves-1.0.0.jar
+# 产物：build/libs/savemysaves-1710-1.0.0.jar
 ```
 把 jar 丢进 `.minecraft/mods/` 即可。
 
-> 若 `setupDecompWorkspace` 报错，可直接在 IDEA 中 `File > New > Project from Existing Sources` 导入 `build.gradle`，再执行 `genIntellijRuns`。
+> 注意：FG 1.2 无法用 Gradle 4.x+ 构建，请用 wrapper（2.14.1）或本机同版本 Gradle。
 
 ## 使用
 1. 启动 MC，进入任意单人存档（或开局域网世界）

@@ -1,10 +1,11 @@
 package com.github.savemysaves;
 
+// 本版本差异（1.7.10）：命令 API 为旧版（getCommandName/getCommandUsage/execute(sender, args)），
+// 聊天组件为 ChatComponentText/IChatComponent（1.11 起 IChatComponent 才拆成 ITextComponent 体系）
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.IChatComponent;
 
 import java.io.File;
 import java.util.Collections;
@@ -13,17 +14,17 @@ import java.util.List;
 public class CommandBackup extends CommandBase {
 
     @Override
-    public String getName() {
+    public String getCommandName() {
         return "backup";
     }
 
     @Override
-    public String getUsage(ICommandSender sender) {
+    public String getCommandUsage(ICommandSender sender) {
         return "/backup <now|status>";
     }
 
     @Override
-    public List<String> getAliases() {
+    public List getCommandAliases() {
         return Collections.singletonList("sms");
     }
 
@@ -33,7 +34,7 @@ public class CommandBackup extends CommandBase {
     }
 
     @Override
-    public void execute(MinecraftServer server, ICommandSender sender, String[] args) {
+    public void processCommand(ICommandSender sender, String[] args) {
         if (!Config.ENABLED) {
             send(sender, "savemysaves.chat.disabled");
             return;
@@ -72,17 +73,17 @@ public class CommandBackup extends CommandBase {
             } else {
                 sb.append(Lang.t("savemysaves.status.noWorld"));
             }
-            send(sender, new TextComponentString(sb.toString()));
+            send(sender, new ChatComponentText(sb.toString()));
         } else {
-            send(sender, "savemysaves.chat.usage", getUsage(sender));
+            send(sender, "savemysaves.chat.usage", getCommandUsage(sender));
         }
     }
 
     private void send(ICommandSender sender, String key, Object... args) {
-        sender.sendMessage(BackupScheduler.text(key, args));
+        sender.addChatMessage(BackupScheduler.text(key, args));
     }
 
-    private void send(ICommandSender sender, ITextComponent msg) {
-        sender.sendMessage(msg);
+    private void send(ICommandSender sender, IChatComponent msg) {
+        sender.addChatMessage(msg);
     }
 }
