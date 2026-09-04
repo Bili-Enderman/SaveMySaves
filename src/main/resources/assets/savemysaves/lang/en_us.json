@@ -1,0 +1,19 @@
+{
+  "savemysaves.chat.starting.scheduled": "§6[SaveMySaves] §eScheduled auto-backup starting...",
+  "savemysaves.chat.starting.manual": "§6[SaveMySaves] §eManual backup starting...",
+  "savemysaves.chat.finished": "§6[SaveMySaves] §aBackup complete: §f%s",
+  "savemysaves.chat.failed": "§6[SaveMySaves] §cBackup failed: %s",
+  "savemysaves.chat.disabled": "§cBackups are disabled (enabled=false in savemysaves-common.toml)",
+  "savemysaves.chat.noWorld": "§cNo world is currently loaded, cannot backup.",
+  "savemysaves.chat.requested": "§aImmediate backup requested, check chat for the result.",
+  "savemysaves.chat.usage": "§cUsage: %s",
+  "savemysaves.status.title": "§6[SaveMySaves] Status",
+  "savemysaves.status.enabled": "§7Enabled: §f%s",
+  "savemysaves.status.interval": "§7Interval: §f%s min",
+  "savemysaves.status.maxBackups": "§7Max backups kept: §f%s",
+  "savemysaves.status.world": "§7Current world: §f%s",
+  "savemysaves.status.noWorld": "§7Current world: §cNone (not in a world)",
+  "savemysaves.status.backupCount": "§7Backups: §f%s / %s",
+  "savemysaves.status.backupDir": "§7Backup directory: §f%s",
+  "savemysaves.status.lastBackup": "§7Last backup: §f%s"
+}

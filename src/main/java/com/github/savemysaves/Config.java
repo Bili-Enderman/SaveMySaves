@@ -1,83 +1,71 @@
 package com.github.savemysaves;
 
-import net.minecraftforge.common.config.Configuration;
-import net.minecraftforge.common.config.Property;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 import java.io.File;
 
-public final class Config {
+/**
+ * 1.16.5 配置：ForgeConfigSpec（1.12.2 的 Configuration 已移除），
+ * 文件为 config/savemysaves-common.toml。注释全部使用英文（运行时规范第 4 条）。
+ * 数值默认值与 1.12.2 版本一致。
+ */
+public class Config {
 
-    /** 配置项语言键前缀，对应 assets/<modid>/lang/*.lang 中的 config.savemysaves.* 键 */
-    private static final String LANG_PREFIX = "config.savemysaves";
+    public static final ForgeConfigSpec SPEC;
 
-    private Config() {}
+    // ---- 配置项句柄 ----
+    private static final ForgeConfigSpec.BooleanValue ENABLED;
+    private static final ForgeConfigSpec.IntValue INTERVAL_MINUTES;
+    private static final ForgeConfigSpec.IntValue MAX_BACKUPS;
+    private static final ForgeConfigSpec.ConfigValue<String> BACKUP_DIR_NAME;
+    private static final ForgeConfigSpec.ConfigValue<String> LANGUAGE;
 
-    public static boolean ENABLED = true;
-    public static int INTERVAL_MINUTES = 15;
-    public static int MAX_BACKUPS = 10;
-    public static String BACKUP_DIR_NAME = "_backups";
-    public static String LANGUAGE = "zh_CN";
+    // ---- 缓存值（ModConfigEvent.Loading/Reloading 时刷新）----
+    public static boolean cfgEnabled = true;
+    public static int cfgIntervalMinutes = 15;
+    public static int cfgMaxBackups = 10;
+    public static String cfgBackupDirName = "_backups";
+    public static String cfgLanguage = "zh_CN";
 
-    public static void load(Configuration cfg) {
-        cfg.load();
+    static {
+        ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
+        b.push("general");
 
-        // 确保 "general" 分类存在并带标题注释（首次生成配置文件时更完整）
-        cfg.addCustomCategoryComment("general", "SaveMySaves 配置");
+        ENABLED = b.comment("Whether to enable automatic scheduled backups.")
+                .define("enabled", true);
 
-        ENABLED = getBool(cfg, "general", "enabled", ENABLED,
-                "是否启用自动定时备份");
+        INTERVAL_MINUTES = b.comment("Automatic backup interval in minutes. Min 1, max 1440.")
+                .defineInRange("intervalMinutes", 15, 1, 1440);
 
-        INTERVAL_MINUTES = getInt(cfg, "general", "intervalMinutes", INTERVAL_MINUTES, 1, 1440,
-                "自动备份间隔（分钟）。最小 1，最大 1440");
+        MAX_BACKUPS = b.comment("Maximum number of backups to keep per world (oldest rolled out). Min 1.")
+                .defineInRange("maxBackups", 10, 1, 1000);
 
-        MAX_BACKUPS = getInt(cfg, "general", "maxBackups", MAX_BACKUPS, 1, 1000,
-                "最多保留的备份份数（滚动删除最旧的）。最小 1");
+        BACKUP_DIR_NAME = b.comment("Backup directory name, relative to the world folder. Start with an underscore so MC does not treat it as a save.")
+                .define("backupDirName", "_backups");
 
-        BACKUP_DIR_NAME = getString(cfg, "general", "backupDirName", BACKUP_DIR_NAME,
-                "备份存放目录名，相对于对应世界存档文件夹（建议以下划线开头避免被 MC 识别为存档）");
+        LANGUAGE = b.comment("Language for chat/command messages (rendered server-side, identical for all clients): zh_CN Simplified Chinese, en_US English.")
+                .define("language", "zh_CN");
 
-        LANGUAGE = getString(cfg, "general", "language", LANGUAGE,
-                "聊天/命令提示使用的语言（服务端统一渲染，所有客户端看到一致）：zh_CN 简体中文，en_US 英文");
-
-        if (cfg.hasChanged()) {
-            cfg.save();
-        }
+        b.pop();
+        SPEC = b.build();
     }
 
+    /** 将配置值刷入缓存。在 ModConfigEvent.Loading / Reloading 时调用。 */
+    public static void refresh() {
+        cfgEnabled = ENABLED.get();
+        cfgIntervalMinutes = INTERVAL_MINUTES.get();
+        cfgMaxBackups = MAX_BACKUPS.get();
+        cfgBackupDirName = BACKUP_DIR_NAME.get();
+        cfgLanguage = LANGUAGE.get();
+    }
+
+    /** 备份目录：用缓存值而非 BACKUP_DIR_NAME.get()，避免配置尚未载入时抛异常。 */
     public static File getBackupDir(File worldDir) {
-        return new File(worldDir, BACKUP_DIR_NAME);
+        return new File(worldDir, cfgBackupDirName);
     }
 
-    // ---------- 内部工具 ----------
-
-    /**
-     * 创建属性并挂上语言键与注释。
-     * 语言键 config.savemysaves.<cat>.<key> 与语言文件一一对应，
-     * Forge 配置 GUI 显示时用它本地化配置项名称。
-     */
-    private static Property prop(Configuration cfg, String cat, String key, String def, String comment) {
-        Property p = cfg.get(cat, key, def);
-        p.setLanguageKey(LANG_PREFIX + "." + cat + "." + key);
-        p.setComment(comment);
-        return p;
-    }
-
-    private static boolean getBool(Configuration cfg, String cat, String key, boolean def, String comment) {
-        Property p = prop(cfg, cat, key, String.valueOf(def), comment);
-        return p.getBoolean(def);
-    }
-
-    private static int getInt(Configuration cfg, String cat, String key, int def, int min, int max, String comment) {
-        Property p = prop(cfg, cat, key, String.valueOf(def), comment + "  [默认: " + def + ", 范围: " + min + "~" + max + "]");
-        int v = p.getInt(def);
-        if (v < min) v = min;
-        if (v > max) v = max;
-        p.set(v); // 修正回写
-        return v;
-    }
-
-    private static String getString(Configuration cfg, String cat, String key, String def, String comment) {
-        Property p = prop(cfg, cat, key, def, comment);
-        return p.getString();
+    static {
+        // 类加载即刷新一次，保证配置文件尚未载入时也有正确默认值
+        refresh();
     }
 }

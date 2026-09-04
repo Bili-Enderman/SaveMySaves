@@ -1,0 +1,32 @@
+modLoader="javafml"
+loaderVersion="[36,)"
+license="MIT"
+
+[[mods]]
+modId="savemysaves"
+version="${file.jarVersion}"
+displayName="SaveMySaves"
+displayTest="IGNORE_ALL_VERSION"
+credits="Backup utility mod"
+authors="SaveMySaves"
+description='''
+Automatically creates rolling zip backups of the world you are
+currently playing, and supports immediate backup via /backup.
+
+Ported from the 1.12.2/1.7.10 versions. Same behavior, same config
+options, same /backup command.
+'''
+
+[[dependencies.savemysaves]]
+    modId="forge"
+    mandatory=true
+    versionRange="[36,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.savemysaves]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.16.5,1.17)"
+    ordering="NONE"
+    side="BOTH"

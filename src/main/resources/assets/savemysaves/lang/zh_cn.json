@@ -1,0 +1,19 @@
+{
+  "savemysaves.chat.starting.scheduled": "§6[SaveMySaves] §e定时自动备份开始...",
+  "savemysaves.chat.starting.manual": "§6[SaveMySaves] §e手动备份开始...",
+  "savemysaves.chat.finished": "§6[SaveMySaves] §a备份完成：§f%s",
+  "savemysaves.chat.failed": "§6[SaveMySaves] §c备份失败：%s",
+  "savemysaves.chat.disabled": "§c备份功能已禁用（savemysaves-common.toml 中 enabled=false）",
+  "savemysaves.chat.noWorld": "§c当前没有正在游玩的世界存档，无法备份。",
+  "savemysaves.chat.requested": "§a已请求立即备份，稍后在聊天栏查看结果。",
+  "savemysaves.chat.usage": "§c用法：%s",
+  "savemysaves.status.title": "§6[SaveMySaves] 状态",
+  "savemysaves.status.enabled": "§7启用：§f%s",
+  "savemysaves.status.interval": "§7间隔：§f%s 分钟",
+  "savemysaves.status.maxBackups": "§7最多保留：§f%s 份",
+  "savemysaves.status.world": "§7当前世界：§f%s",
+  "savemysaves.status.noWorld": "§7当前世界：§c无（未进入任何存档）",
+  "savemysaves.status.backupCount": "§7已备份：§f%s / %s 份",
+  "savemysaves.status.backupDir": "§7备份目录：§f%s",
+  "savemysaves.status.lastBackup": "§7最近备份：§f%s"
+}

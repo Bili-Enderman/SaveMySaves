@@ -1,50 +1,60 @@
 buildscript {
     repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
         mavenCentral()
-        maven { url = "https://maven.minecraftforge.net" }
-        maven { url = "https://files.minecraftforge.net/maven" }
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3.7'
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
     }
 }
+apply plugin: 'net.minecraftforge.gradle'
 
-apply plugin: 'net.minecraftforge.gradle.forge'
+// 版本号：mod名 + mc版本 + mod版本（见 .MCMOD.runtime.txt）
+version = '1.0.0'
+group = 'com.github.savemysaves'
+archivesBaseName = 'savemysaves-1.16.5'
 
-// Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
-version = "1.0.0"
-group = "com.github.savemysaves"
-archivesBaseName = "savemysaves"
+java.toolchain.languageVersion = JavaLanguageVersion.of(8)
 
-sourceCompatibility = targetCompatibility = '1.8'
-compileJava {
-    sourceCompatibility = '1.8'
-    targetCompatibility = '1.8'
+tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
 minecraft {
-    version = "1.12.2-14.23.5.2847"
-    runDir = "run"
-    mappings = "snapshot_20171003"
-    makeObfSourceJar = false
+    mappings channel: 'official', version: '1.16.5'
+
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.console.level', 'debug'
+            mods { savemysaves { source sourceSets.main } }
+        }
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.console.level', 'debug'
+            mods { savemysaves { source sourceSets.main } }
+        }
+    }
 }
 
 dependencies {
-    // 本 Mod 仅使用 Forge 提供的 API，无需额外依赖
+    minecraft 'net.minecraftforge:forge:1.16.5-36.2.39'
 }
 
-processResources {
-    filteringCharset = 'UTF-8'
-    inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
-
-    from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-        expand 'version': project.version, 'mcversion': project.minecraft.version
-    }
-
-    from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
+jar {
+    manifest {
+        attributes([
+            "Specification-Title": "savemysaves",
+            "Specification-Vendor": "com.github.savemysaves",
+            "Specification-Version": "1",
+            "Implementation-Title": project.name,
+            "Implementation-Version": "${version}",
+            "Implementation-Vendor": "com.github.savemysaves",
+            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
     }
 }
+
+// FG 5.1.77 的 reobfJar 对 official 名字节码零匹配（无实效），
+// 发布版由 SpecialSource + _mdk/official_to_srg.tsrg 手工重映射（见 README）
+jar.finalizedBy('reobfJar')

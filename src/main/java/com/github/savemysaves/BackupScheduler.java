@@ -1,9 +1,10 @@
 package com.github.savemysaves;
 
+import net.minecraft.Util;
+import net.minecraft.network.chat.ChatType;
+import net.minecraft.network.chat.StringTextComponent;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraftforge.fml.common.FMLCommonHandler;
+import net.minecraftforge.fml.server.ServerLifecycleHooks;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -12,10 +13,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 备份调度器：单例，独立后台线程。
- * - 定时：每 INTERVAL_MINUTES 分钟对当前游玩的世界做一次全量压缩备份
- * - 立即：通过 requestImmediate(reason) 触发一次（命令 / 进出世界）
- * - 滚动：每个世界目录独立保留最多 MAX_BACKUPS 份，超出删最旧
+ * 备份调度器：单例，独立后台线程（逻辑与 1.12.2 一致：定时 + 立即 + 滚动删除）。
+ * 1.16.5 差异：
+ *   - FMLCommonHandler.getMinecraftServerInstance() → ServerLifecycleHooks.getCurrentServer()
+ *   - TextComponentString → StringTextComponent（official 映射）
+ *   - 群发消息走 PlayerList.broadcastMessage(Component, ChatType, UUID)
  */
 public enum BackupScheduler {
 
@@ -39,13 +41,13 @@ public enum BackupScheduler {
     public synchronized void start() {
         if (running.get()) return;
         running.set(true);
-        nextScheduledTime.set(System.currentTimeMillis() + Config.INTERVAL_MINUTES * 60_000L);
+        nextScheduledTime.set(System.currentTimeMillis() + Config.cfgIntervalMinutes * 60_000L);
 
         worker = new Thread(this::loop, "SaveMySaves-BackupThread");
         worker.setDaemon(true);
         worker.start();
 
-        log("备份调度器已启动，间隔=" + Config.INTERVAL_MINUTES + "分钟，最多保留=" + Config.MAX_BACKUPS + "份");
+        log("备份调度器已启动，间隔=" + Config.cfgIntervalMinutes + "分钟，最多保留=" + Config.cfgMaxBackups + "份");
     }
 
     public synchronized void shutdown() {
@@ -53,9 +55,9 @@ public enum BackupScheduler {
         if (worker != null) worker.interrupt();
     }
 
-    /** 外部触发立即备份（命令 / 进出世界） */
+    /** 外部触发立即备份（命令） */
     public void requestImmediate(String reason) {
-        if (!Config.ENABLED) return;
+        if (!Config.cfgEnabled) return;
         this.immediateReason = reason;
         // 唤醒工作线程
         if (worker != null) worker.interrupt();
@@ -68,7 +70,6 @@ public enum BackupScheduler {
             try {
                 long now = System.currentTimeMillis();
 
-                // 是否应该触发一次备份
                 boolean should = false;
                 String reason = null;
 
@@ -84,17 +85,16 @@ public enum BackupScheduler {
                 if (should) {
                     tryBackup(reason);
                     // 无论成功与否，重排下一次定时
-                    nextScheduledTime.set(System.currentTimeMillis() + Config.INTERVAL_MINUTES * 60_000L);
+                    nextScheduledTime.set(System.currentTimeMillis() + Config.cfgIntervalMinutes * 60_000L);
                 }
 
-                // 等待到下一次定时（可被 interrupt 提前唤醒处理立即请求）
                 long sleep = nextScheduledTime.get() - System.currentTimeMillis();
                 if (sleep > 0) {
                     Thread.sleep(sleep);
                 }
             } catch (InterruptedException e) {
                 // 被唤醒：重新检查是否有立即请求
-                Thread.currentThread().interrupt(); // 保留中断标志
+                Thread.currentThread().interrupt();
             } catch (Exception e) {
                 logError("调度器异常", e);
             }
@@ -104,7 +104,7 @@ public enum BackupScheduler {
     // ---------- 执行备份 ----------
 
     private void tryBackup(String reason) {
-        if (!Config.ENABLED) return;
+        if (!Config.cfgEnabled) return;
         if (!backingUp.compareAndSet(false, true)) {
             // 已有备份在进行，跳过本次避免叠加
             return;
@@ -116,7 +116,6 @@ public enum BackupScheduler {
                 return;
             }
 
-            // 通知玩家（服务端用 Lang 渲染成纯文本后群发，任何客户端都能正确显示）
             broadcast("savemysaves.chat.starting." + reason);
 
             File backupDir = Config.getBackupDir(worldDir);
@@ -144,12 +143,11 @@ public enum BackupScheduler {
     private void cleanupOldBackups(File backupDir, String worldName) {
         File[] files = backupDir.listFiles((d, name) -> name.startsWith(worldName + "_") && name.endsWith(".zip"));
         if (files == null) return;
-        if (files.length <= Config.MAX_BACKUPS) return;
+        if (files.length <= Config.cfgMaxBackups) return;
 
-        // 按最后修改时间排序（旧的在前）
         java.util.Arrays.sort(files, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
 
-        int toDelete = files.length - Config.MAX_BACKUPS;
+        int toDelete = files.length - Config.cfgMaxBackups;
         for (int i = 0; i < toDelete; i++) {
             if (files[i].delete()) {
                 log("已删除旧备份：" + files[i].getName());
@@ -162,24 +160,23 @@ public enum BackupScheduler {
     /** 群发消息：服务端已用 Lang 渲染成纯文本，原版/Forge 客户端都能直接显示。 */
     private void broadcast(String key, Object... args) {
         try {
-            MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
+            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
             if (server != null) {
-                server.getPlayerList().sendMessage(text(key, args));
+                server.getPlayerList().broadcastMessage(text(key, args), ChatType.SYSTEM, Util.NIL_UUID);
             }
         } catch (Exception ignored) {}
     }
 
     /** 把语言键 + 参数格式化成纯文本组件（服务端语言包，见 Lang）。 */
-    static ITextComponent text(String key, Object... args) {
-        return new TextComponentString(Lang.t(key, args));
+    static StringTextComponent text(String key, Object... args) {
+        return new StringTextComponent(Lang.t(key, args));
     }
 
     static void log(String msg) {
-        System.out.println("[SaveMySaves] " + msg);
+        SaveMySaves.LOGGER.info(msg);
     }
 
     static void logError(String msg, Exception e) {
-        System.err.println("[SaveMySaves] " + msg + ": " + e);
-        e.printStackTrace();
+        SaveMySaves.LOGGER.error(msg, e);
     }
 }
