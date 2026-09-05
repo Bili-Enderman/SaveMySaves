@@ -53,7 +53,7 @@ public class CommonProxy {
     @SubscribeEvent
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (FMLCommonHandler.instance().getSide() != Side.CLIENT) return;
-        if (event.player != null && !event.player.world.isRemote) {
+        if (event.player != null && !event.player.worldObj.isRemote) {
             SaveMySaves.currentWorldDir = null;
             SaveMySaves.inGameWorld = false;
         }

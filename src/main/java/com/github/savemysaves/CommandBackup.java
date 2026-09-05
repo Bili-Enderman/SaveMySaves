@@ -1,29 +1,36 @@
 package com.github.savemysaves;
 
 import net.minecraft.command.CommandBase;
+import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.IChatComponent;
 
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * /backup 命令（1.8.9 旧版命令 API，与 1.12.2 的差异）：
+ *   getName→getCommandName、getUsage→getCommandUsage、getAliases→getCommandAliases、
+ *   execute(server,sender,args)→processCommand(sender,args)
+ * 聊天组件：ChatComponentText/IChatComponent + addChatMessage（sendMessage 是 1.12+）。
+ * 多行输出按行拆分逐条发送（1.12 之前聊天组件不渲染 \n，会画成 "LF" 字形方框）。
+ */
 public class CommandBackup extends CommandBase {
 
     @Override
-    public String getName() {
+    public String getCommandName() {
         return "backup";
     }
 
     @Override
-    public String getUsage(ICommandSender sender) {
+    public String getCommandUsage(ICommandSender sender) {
         return "/backup <now|status>";
     }
 
     @Override
-    public List<String> getAliases() {
+    public List<String> getCommandAliases() {
         return Collections.singletonList("sms");
     }
 
@@ -33,7 +40,7 @@ public class CommandBackup extends CommandBase {
     }
 
     @Override
-    public void execute(MinecraftServer server, ICommandSender sender, String[] args) {
+    public void processCommand(ICommandSender sender, String[] args) throws CommandException {
         if (!Config.ENABLED) {
             send(sender, "savemysaves.chat.disabled");
             return;
@@ -72,17 +79,20 @@ public class CommandBackup extends CommandBase {
             } else {
                 sb.append(Lang.t("savemysaves.status.noWorld"));
             }
-            send(sender, new TextComponentString(sb.toString()));
+            // 1.12 之前聊天组件不渲染 \n：按行拆分逐条发送
+            for (String line : sb.toString().split("\n")) {
+                send(sender, new ChatComponentText(line));
+            }
         } else {
-            send(sender, "savemysaves.chat.usage", getUsage(sender));
+            send(sender, "savemysaves.chat.usage", getCommandUsage(sender));
         }
     }
 
     private void send(ICommandSender sender, String key, Object... args) {
-        sender.sendMessage(BackupScheduler.text(key, args));
+        sender.addChatMessage(BackupScheduler.text(key, args));
     }
 
-    private void send(ICommandSender sender, ITextComponent msg) {
-        sender.sendMessage(msg);
+    private void send(ICommandSender sender, IChatComponent msg) {
+        sender.addChatMessage(msg);
     }
 }

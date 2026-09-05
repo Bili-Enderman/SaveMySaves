@@ -1,37 +1,30 @@
 buildscript {
     repositories {
         mavenCentral()
-        maven { url = "https://maven.minecraftforge.net" }
-        maven { url = "https://files.minecraftforge.net/maven" }
+        maven {
+            name = "forge"
+            url = "https://maven.minecraftforge.net"
+        }
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3.7'
+        // FG 2.1.x 系列官方适配 1.8.9；2.1.6 为 Forge 官方重发版，
+        // 原版 jar 走 launchermeta.mojang.com、MCP 数据/映射走 maven.minecraftforge.net（均存活）
+        classpath 'net.minecraftforge.gradle:ForgeGradle:2.1.6'
     }
 }
 
 apply plugin: 'net.minecraftforge.gradle.forge'
 
-// Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
-version = "1.0.0"
+// 版本号：mod名 + mc版本 + mod版本（见 .MCMOD.runtime.txt）
+version = "1.8.9-1.0.0"
 group = "com.github.savemysaves"
 archivesBaseName = "savemysaves"
 
-sourceCompatibility = targetCompatibility = '1.8'
-compileJava {
-    sourceCompatibility = '1.8'
-    targetCompatibility = '1.8'
-    options.encoding = 'UTF-8'
-}
-
 minecraft {
-    version = "1.12.2-14.23.5.2847"
+    version = "1.8.9-11.15.1.2318-1.8.9"
     runDir = "run"
-    mappings = "snapshot_20171003"
-    makeObfSourceJar = false
-}
-
-dependencies {
-    // 本 Mod 仅使用 Forge 提供的 API，无需额外依赖
+    // 1.8.9 可用的最新 MCP snapshot 映射（maven.minecraftforge.net/de/oceanlabs/mcp）
+    mappings = "snapshot_20160301"
 }
 
 processResources {
@@ -47,4 +40,19 @@ processResources {
     from(sourceSets.main.resources.srcDirs) {
         exclude 'mcmod.info'
     }
+}
+
+// 编译兼容性（JDK8 编译）
+compileJava {
+    sourceCompatibility = "1.8"
+    targetCompatibility = "1.8"
+}
+
+// 确保使用UTF-8（javac 默认 GBK 读 UTF-8 源码会连锁报"找不到符号"）
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    // 本 Mod 仅使用 Forge 提供的 API，无需额外依赖
 }

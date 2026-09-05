@@ -1,8 +1,7 @@
 package com.github.savemysaves;
 
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.ChatComponentText;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 
 import java.io.File;
@@ -12,10 +11,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 备份调度器：单例，独立后台线程。
- * - 定时：每 INTERVAL_MINUTES 分钟对当前游玩的世界做一次全量压缩备份
- * - 立即：通过 requestImmediate(reason) 触发一次（命令 / 进出世界）
- * - 滚动：每个世界目录独立保留最多 MAX_BACKUPS 份，超出删最旧
+ * 备份调度器：单例，独立后台线程（逻辑与 1.12.2 一致：定时 + 立即 + 滚动删除）。
+ * 1.8.9 差异：
+ *   - TextComponentString → ChatComponentText（1.11 前的命名）
+ *   - 群发消息走 ServerConfigurationManager.sendChatMsg(IChatComponent)
+ * 线程模型（1.16.5 版实测事故教训，全版本通用）：
+ *   - 严禁用 interrupt() 唤醒工作线程：类懒加载时，带中断标志的线程读 jar 字节码
+ *     会抛 ClosedByInterruptException → NoClassDefFoundError（Error，catch(Exception)
+ *     接不住）→ 工作线程静默死亡，之后所有备份失效。改为 500ms 步长轮询。
+ *   - 主循环必须 catch Throwable，Error 逃逸会杀死线程。
+ *   - 启动时预热 ZipUtil，不依赖首次备份时的懒加载。
  */
 public enum BackupScheduler {
 
@@ -53,50 +58,46 @@ public enum BackupScheduler {
         if (worker != null) worker.interrupt();
     }
 
-    /** 外部触发立即备份（命令 / 进出世界） */
+    /** 外部触发立即备份（命令 / 进出世界）。轮询模式下最多延迟 500ms 被处理。 */
     public void requestImmediate(String reason) {
         if (!Config.ENABLED) return;
         this.immediateReason = reason;
-        // 唤醒工作线程
-        if (worker != null) worker.interrupt();
+        // 注意：不要 interrupt()（事故教训见类注释）
     }
 
     // ---------- 主循环 ----------
 
     private void loop() {
+        // 预热 ZipUtil：强制提前完成类加载，不依赖首次备份时的懒加载
+        try {
+            Class.forName("com.github.savemysaves.ZipUtil", false, BackupScheduler.class.getClassLoader());
+        } catch (Throwable t) {
+            logError("ZipUtil 预热失败", new Exception(t));
+        }
+
         while (running.get()) {
             try {
-                long now = System.currentTimeMillis();
-
-                // 是否应该触发一次备份
-                boolean should = false;
-                String reason = null;
-
-                if (immediateReason != null) {
-                    reason = immediateReason;
+                String reason = immediateReason;
+                if (reason != null) {
                     immediateReason = null;
-                    should = true;
-                } else if (now >= nextScheduledTime.get()) {
+                } else if (System.currentTimeMillis() >= nextScheduledTime.get()) {
                     reason = "scheduled";
-                    should = true;
                 }
 
-                if (should) {
+                if (reason != null) {
                     tryBackup(reason);
                     // 无论成功与否，重排下一次定时
                     nextScheduledTime.set(System.currentTimeMillis() + Config.INTERVAL_MINUTES * 60_000L);
                 }
 
-                // 等待到下一次定时（可被 interrupt 提前唤醒处理立即请求）
-                long sleep = nextScheduledTime.get() - System.currentTimeMillis();
-                if (sleep > 0) {
-                    Thread.sleep(sleep);
-                }
+                // 短步长轮询代替 interrupt 唤醒：手动请求最多延迟 500ms，开销可忽略
+                long untilNext = nextScheduledTime.get() - System.currentTimeMillis();
+                Thread.sleep(Math.min(500, Math.max(1, untilNext)));
             } catch (InterruptedException e) {
-                // 被唤醒：重新检查是否有立即请求
-                Thread.currentThread().interrupt(); // 保留中断标志
-            } catch (Exception e) {
-                logError("调度器异常", e);
+                // shutdown 唤醒：进入下一轮检查 running 标志后自然退出
+            } catch (Throwable t) {
+                // 必须 catch Throwable：NoClassDefFoundError 等 Error 若逃逸会静默杀死工作线程
+                logError("调度器异常", new Exception(t));
             }
         }
     }
@@ -116,7 +117,6 @@ public enum BackupScheduler {
                 return;
             }
 
-            // 通知玩家（服务端用 Lang 渲染成纯文本后群发，任何客户端都能正确显示）
             broadcast("savemysaves.chat.starting." + reason);
 
             File backupDir = Config.getBackupDir(worldDir);
@@ -146,7 +146,6 @@ public enum BackupScheduler {
         if (files == null) return;
         if (files.length <= Config.MAX_BACKUPS) return;
 
-        // 按最后修改时间排序（旧的在前）
         java.util.Arrays.sort(files, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
 
         int toDelete = files.length - Config.MAX_BACKUPS;
@@ -164,22 +163,21 @@ public enum BackupScheduler {
         try {
             MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
             if (server != null) {
-                server.getPlayerList().sendMessage(text(key, args));
+                server.getConfigurationManager().sendChatMsg(text(key, args));
             }
         } catch (Exception ignored) {}
     }
 
     /** 把语言键 + 参数格式化成纯文本组件（服务端语言包，见 Lang）。 */
-    static ITextComponent text(String key, Object... args) {
-        return new TextComponentString(Lang.t(key, args));
+    static ChatComponentText text(String key, Object... args) {
+        return new ChatComponentText(Lang.t(key, args));
     }
 
     static void log(String msg) {
-        System.out.println("[SaveMySaves] " + msg);
+        SaveMySaves.LOGGER.info(msg);
     }
 
     static void logError(String msg, Exception e) {
-        System.err.println("[SaveMySaves] " + msg + ": " + e);
-        e.printStackTrace();
+        SaveMySaves.LOGGER.error(msg, e);
     }
 }
