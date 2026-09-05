@@ -1,7 +1,6 @@
 package com.github.savemysaves;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -55,20 +54,57 @@ public final class ZipUtil {
     }
 
     private static void writeEntry(ZipOutputStream zos, String relPath, File file) throws IOException {
+        // 跳过 session.lock：游戏通过 FileChannel.lock() 全程持有该文件的字节锁，
+        // Windows 上 FileLock 是强制锁，同 JVM 内其他通道读取锁定区域也直接抛
+        // IOException（"另一个程序已锁定文件的一部分"），该文件内容对备份亦无意义。
+        if ("session.lock".equals(file.getName())) {
+            return;
+        }
+
+        // 先读入内存再写条目：单文件读取失败只跳过该文件，
+        // 不能让整个备份报废（正在游玩时部分文件可能被游戏/其他程序短暂锁定）。
+        byte[] data;
+        try {
+            data = readWithRetry(file, 3, 50);
+        } catch (IOException e) {
+            SaveMySaves.LOGGER.warn("[SaveMySaves] 跳过被锁定的文件：" + relPath + "（" + e.getMessage() + "）");
+            return;
+        }
+
         // ZIP 条目用 /
         String entryName = relPath.replace(File.separatorChar, '/');
         ZipEntry entry = new ZipEntry(entryName);
         entry.setTime(file.lastModified());
         zos.putNextEntry(entry);
+        zos.write(data);
+        zos.closeEntry();
+    }
 
-        try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file))) {
-            byte[] buf = new byte[64 * 1024];
-            int len;
-            while ((len = bis.read(buf)) > 0) {
-                zos.write(buf, 0, len);
+    /** 带重试的整文件读取：瞬时锁（文件正被改写/替换）通常几十毫秒内释放。 */
+    private static byte[] readWithRetry(File file, int attempts, long retryDelayMs) throws IOException {
+        IOException last = null;
+        for (int i = 0; i < attempts; i++) {
+            try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file))) {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                byte[] buf = new byte[64 * 1024];
+                int len;
+                while ((len = bis.read(buf)) > 0) {
+                    bos.write(buf, 0, len);
+                }
+                return bos.toByteArray();
+            } catch (IOException e) {
+                last = e;
+                if (i < attempts - 1) {
+                    try {
+                        Thread.sleep(retryDelayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
             }
         }
-        zos.closeEntry();
+        throw last;
     }
 
     /** 计算文件相对 root 的路径 */
