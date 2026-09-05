@@ -1,24 +1,24 @@
 package com.github.savemysaves;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.io.File;
 
 /**
- * 1.16.5 配置：ForgeConfigSpec（1.12.2 的 Configuration 已移除），
+ * 1.20.6 配置：ModConfigSpec（NeoForge 的 TOML 配置系统，取代 Forge 的 ForgeConfigSpec），
  * 文件为 config/savemysaves-common.toml。注释全部使用英文（运行时规范第 4 条）。
- * 数值默认值与 1.12.2 版本一致。
+ * 数值默认值与 1.16.5 版本一致。
  */
 public class Config {
 
-    public static final ForgeConfigSpec SPEC;
+    public static final ModConfigSpec SPEC;
 
     // ---- 配置项句柄 ----
-    private static final ForgeConfigSpec.BooleanValue ENABLED;
-    private static final ForgeConfigSpec.IntValue INTERVAL_MINUTES;
-    private static final ForgeConfigSpec.IntValue MAX_BACKUPS;
-    private static final ForgeConfigSpec.ConfigValue<String> BACKUP_DIR_NAME;
-    private static final ForgeConfigSpec.ConfigValue<String> LANGUAGE;
+    private static final ModConfigSpec.BooleanValue ENABLED;
+    private static final ModConfigSpec.IntValue INTERVAL_MINUTES;
+    private static final ModConfigSpec.IntValue MAX_BACKUPS;
+    private static final ModConfigSpec.ConfigValue<String> BACKUP_DIR_NAME;
+    private static final ModConfigSpec.ConfigValue<String> LANGUAGE;
 
     // ---- 缓存值（ModConfigEvent.Loading/Reloading 时刷新）----
     public static boolean cfgEnabled = true;
@@ -28,7 +28,7 @@ public class Config {
     public static String cfgLanguage = "zh_CN";
 
     static {
-        ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder b = new ModConfigSpec.Builder();
         b.push("general");
 
         ENABLED = b.comment("Whether to enable automatic scheduled backups.")

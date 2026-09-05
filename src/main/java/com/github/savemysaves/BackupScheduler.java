@@ -1,10 +1,8 @@
 package com.github.savemysaves;
 
-import net.minecraft.Util;
-import net.minecraft.network.chat.ChatType;
-import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraftforge.fml.server.ServerLifecycleHooks;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -13,11 +11,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 备份调度器：单例，独立后台线程（逻辑与 1.12.2 一致：定时 + 立即 + 滚动删除）。
- * 1.16.5 差异：
- *   - FMLCommonHandler.getMinecraftServerInstance() → ServerLifecycleHooks.getCurrentServer()
- *   - TextComponentString → TextComponent（official 映射，1.16.5 字面文本组件为 TextComponent）
- *   - 群发消息走 PlayerList.broadcastMessage(Component, ChatType, UUID)
+ * 备份调度器：单例，独立后台线程（逻辑与 1.16.5 一致：定时 + 立即 + 滚动删除）。
+ * 1.20.6 差异：
+ *   - ServerLifecycleHooks → net.neoforged.neoforge.server.ServerLifecycleHooks
+ *   - 群发消息 broadcastMessage(Component, ChatType, UUID) → broadcastSystemMessage(Component, boolean)
+ *   - TextComponent → Component.literal
+ *   - 日志 Log4j → SLF4J
  */
 public enum BackupScheduler {
 
@@ -159,19 +158,19 @@ public enum BackupScheduler {
 
     // ---------- 工具 ----------
 
-    /** 群发消息：服务端已用 Lang 渲染成纯文本，原版/Forge 客户端都能直接显示。 */
+    /** 群发消息：服务端已用 Lang 渲染成纯文本，原版/NeoForge 客户端都能直接显示。 */
     private void broadcast(String key, Object... args) {
         try {
             MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
             if (server != null) {
-                server.getPlayerList().broadcastMessage(text(key, args), ChatType.SYSTEM, Util.NIL_UUID);
+                server.getPlayerList().broadcastSystemMessage(text(key, args), false);
             }
         } catch (Exception ignored) {}
     }
 
     /** 把语言键 + 参数格式化成纯文本组件（服务端语言包，见 Lang）。 */
-    static TextComponent text(String key, Object... args) {
-        return new TextComponent(Lang.t(key, args));
+    static Component text(String key, Object... args) {
+        return Component.literal(Lang.t(key, args));
     }
 
     static void log(String msg) {

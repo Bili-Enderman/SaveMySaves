@@ -4,14 +4,18 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.Component;
 
 import java.io.File;
 
 /**
- * /backup 命令（1.16.5 Brigadier 实现，替代 1.12.2 的 CommandBase）。
+ * /backup 命令（Brigadier 实现，1.16.5 → 1.20.6 差异仅消息组件构造与 sendSuccess 签名）。
  * 用法：/backup <now|status>；别名 /sms 由 GameEvents 通过 redirect 注册。
  * 权限等级 0：单人游戏所有人可执行；服务器上如需限制可改 hasPermission 后重新构建。
+ *
+ * 1.20.6 差异：
+ *   - TextComponent → Component.literal(...)（1.19.3+ 起工厂方法，TextComponent 类已移除）
+ *   - sendSuccess(Component, boolean) → sendSuccess(Supplier<Component>, boolean)（1.20.2+）
  */
 public class CommandBackup {
 
@@ -55,7 +59,7 @@ public class CommandBackup {
             return;
         }
         BackupScheduler.INSTANCE.requestImmediate("manual");
-        source.sendSuccess(BackupScheduler.text("savemysaves.chat.requested"), false);
+        source.sendSuccess(() -> BackupScheduler.text("savemysaves.chat.requested"), false);
     }
 
     private static void status(CommandSourceStack source) {
@@ -87,7 +91,7 @@ public class CommandBackup {
         }
         // 多行输出按行拆分逐条发送（聊天组件不渲染 \n）
         for (String line : sb.toString().split("\n")) {
-            source.sendSuccess(new TextComponent(line), false);
+            source.sendSuccess(() -> Component.literal(line), false);
         }
     }
 }
