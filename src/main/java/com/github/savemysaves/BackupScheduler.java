@@ -59,13 +59,21 @@ public enum BackupScheduler {
     public void requestImmediate(String reason) {
         if (!Config.ENABLED) return;
         this.immediateReason = reason;
-        // 唤醒工作线程
-        if (worker != null) worker.interrupt();
+        // 注意：不要 interrupt()（1.16.5 版实测事故：带中断标志的线程懒加载
+        // ZipUtil 时读 jar 抛 ClosedByInterruptException → NoClassDefFoundError，
+        // Error 逃逸杀死线程。轮询模式下最多延迟 500ms 被处理）
     }
 
     // ---------- 主循环 ----------
 
     private void loop() {
+        // 预热 ZipUtil：强制提前完成类加载，不依赖首次备份时的懒加载
+        try {
+            Class.forName("com.github.savemysaves.ZipUtil", false, BackupScheduler.class.getClassLoader());
+        } catch (Throwable t) {
+            logError("ZipUtil 预热失败", new Exception(t));
+        }
+
         while (running.get()) {
             try {
                 long now = System.currentTimeMillis();
@@ -89,16 +97,14 @@ public enum BackupScheduler {
                     nextScheduledTime.set(System.currentTimeMillis() + Config.INTERVAL_MINUTES * 60_000L);
                 }
 
-                // 等待到下一次定时（可被 interrupt 提前唤醒处理立即请求）
-                long sleep = nextScheduledTime.get() - System.currentTimeMillis();
-                if (sleep > 0) {
-                    Thread.sleep(sleep);
-                }
+                // 短步长轮询代替 interrupt 唤醒：手动请求最多延迟 500ms，开销可忽略
+                long untilNext = nextScheduledTime.get() - System.currentTimeMillis();
+                Thread.sleep(Math.min(500, Math.max(1, untilNext)));
             } catch (InterruptedException e) {
-                // 被唤醒：重新检查是否有立即请求
-                Thread.currentThread().interrupt(); // 保留中断标志
-            } catch (Exception e) {
-                logError("调度器异常", e);
+                // shutdown 唤醒：进入下一轮检查 running 标志后自然退出
+            } catch (Throwable t) {
+                // 必须 catch Throwable：NoClassDefFoundError 等 Error 若逃逸会静默杀死工作线程
+                logError("调度器异常", new Exception(t));
             }
         }
     }
