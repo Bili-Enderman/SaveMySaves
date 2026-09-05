@@ -1,44 +1,61 @@
-buildscript {
-    repositories {
-        maven { url = 'https://maven.minecraftforge.net' }
-        mavenCentral()
-    }
-    dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
-    }
-}
-apply plugin: 'net.minecraftforge.gradle'
-
-// 版本号：mod名 + mc版本 + mod版本（见 .MCMOD.runtime.txt）
-version = '1.1.0'
-group = 'com.github.savemysaves'
-archivesBaseName = 'savemysaves-1.16.5'
-
-java.toolchain.languageVersion = JavaLanguageVersion.of(8)
-
-tasks.withType(JavaCompile) {
-    options.encoding = 'UTF-8'
+plugins {
+    id 'java-library'
+    id 'net.neoforged.gradle.userdev' version '7.1.38'
 }
 
-minecraft {
-    mappings channel: 'official', version: '1.16.5'
+// 版本号来源：gradle.properties 的 mod_version（mod名+mc版本+mod版本，见 .MCMOD.runtime.txt）
+version = mod_version
+group = mod_group_id
 
-    runs {
-        client {
-            workingDirectory project.file('run')
-            property 'forge.logging.console.level', 'debug'
-            mods { savemysaves { source sourceSets.main } }
-        }
-        server {
-            workingDirectory project.file('run')
-            property 'forge.logging.console.level', 'debug'
-            mods { savemysaves { source sourceSets.main } }
-        }
+base {
+    archivesName = mod_id
+}
+
+// Minecraft 1.20.5+ 要求 Java 21
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+runs {
+    configureEach {
+        systemProperty 'forge.logging.markers', 'REGISTRIES'
+        systemProperty 'forge.logging.console.level', 'debug'
+        workingDirectory project.layout.projectDirectory.dir('run').dir(name)
+        modSource project.sourceSets.main
+    }
+
+    client {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+    }
+
+    server {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        argument '--nogui'
     }
 }
 
 dependencies {
-    minecraft 'net.minecraftforge:forge:1.16.5-36.2.39'
+    implementation "net.neoforged:neoforge:${neo_version}"
+}
+
+tasks.withType(ProcessResources).configureEach {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
 }
 
 jar {
@@ -54,7 +71,3 @@ jar {
         ])
     }
 }
-
-// FG 5.1.77 的 reobfJar 对 official 名字节码零匹配（无实效），
-// 发布版由 SpecialSource + _mdk/official_to_srg.tsrg 手工重映射（见 README）
-jar.finalizedBy('reobfJar')

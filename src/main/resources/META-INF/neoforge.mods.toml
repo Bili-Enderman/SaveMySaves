@@ -1,0 +1,33 @@
+# NeoForge 20.5+ 只认 neoforge.mods.toml（原 mods.toml 改名）
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+displayTest="IGNORE_ALL_VERSION"
+credits="Backup utility mod"
+authors="SaveMySaves"
+description='''
+Automatically creates rolling zip backups of the world you are
+currently playing, and supports immediate backup via /backup.
+
+Ported from the 1.7.10/1.8.9/1.12.2/1.16.5 versions. Same behavior,
+same config options, same /backup command.
+'''
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="${neo_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
