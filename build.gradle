@@ -10,7 +10,7 @@ buildscript {
 apply plugin: 'net.minecraftforge.gradle'
 
 // 版本号：mod名 + mc版本 + mod版本（见 .MCMOD.runtime.txt）
-version = '1.0.0'
+version = '1.1.0'
 group = 'com.github.savemysaves'
 archivesBaseName = 'savemysaves-1.16.5'
 
