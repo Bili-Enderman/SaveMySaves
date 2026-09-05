@@ -56,9 +56,9 @@ public final class Config {
      * Forge 配置 GUI 显示时用它本地化配置项名称。
      */
     private static Property prop(Configuration cfg, String cat, String key, String def, String comment) {
-        Property p = cfg.get(cat, key, def);
+        // 本版本差异（1.8.9）：Property 无 setComment()，注释走 Configuration.get 四参重载
+        Property p = cfg.get(cat, key, def, comment);
         p.setLanguageKey(LANG_PREFIX + "." + cat + "." + key);
-        p.setComment(comment);
         return p;
     }
 

@@ -173,11 +173,14 @@ public enum BackupScheduler {
         return new ChatComponentText(Lang.t(key, args));
     }
 
+    private static final org.apache.logging.log4j.Logger LOGGER =
+            org.apache.logging.log4j.LogManager.getLogger("savemysaves");
+
     static void log(String msg) {
-        SaveMySaves.LOGGER.info(msg);
+        LOGGER.info(msg);
     }
 
     static void logError(String msg, Exception e) {
-        SaveMySaves.LOGGER.error(msg, e);
+        LOGGER.error(msg, e);
     }
 }
