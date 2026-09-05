@@ -64,8 +64,9 @@ public class Config {
         return new File(worldDir, cfgBackupDirName);
     }
 
-    static {
-        // 类加载即刷新一次，保证配置文件尚未载入时也有正确默认值
-        refresh();
-    }
+    // 注意：不要在类加载/static 块中调用 refresh()！
+    // NeoForge 20.6 起 ModConfigSpec.ConfigValue.get() 在配置未加载时直接抛
+    // IllegalStateException（"Cannot get config value before config is loaded"，
+    // 1.16.5 的 ForgeConfigSpec 是静默返回默认值，行为已收紧，未来生产环境也会抛）。
+    // 缓存字段已在声明处带默认值，refresh() 仅在 ModConfigEvent（配置已加载）时调用。
 }
