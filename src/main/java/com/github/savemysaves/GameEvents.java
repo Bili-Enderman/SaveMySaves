@@ -28,8 +28,10 @@ public class GameEvents {
 
         // 1.16.5 差异：ISaveHandler 已被 LevelStorageAccess 取代。
         // 世界根目录统一走 server.getWorldPath(LevelResource.ROOT)：
-        // 单人=saves/<名>，专用服务器=世界根目录，语义与 1.12.2 的解析逻辑一致。
-        File worldDir = event.world.getServer().getWorldPath(LevelResource.ROOT).toFile();
+        // 单人=saves/<名>，专用服务器=世界根目录。
+        // 注意：LevelResource.ROOT 的 id 是"."，返回路径带尾部"/."成分，
+        // 必须 normalize()，否则 worldDir.getName() 变成"."，备份目录与文件名全错。
+        File worldDir = event.world.getServer().getWorldPath(LevelResource.ROOT).normalize().toFile();
         if (worldDir.exists() && !worldDir.equals(SaveMySaves.currentWorldDir)) {
             SaveMySaves.currentWorldDir = worldDir;
             SaveMySaves.inGameWorld = true;

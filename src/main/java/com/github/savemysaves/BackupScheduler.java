@@ -55,48 +55,50 @@ public enum BackupScheduler {
         if (worker != null) worker.interrupt();
     }
 
-    /** 外部触发立即备份（命令） */
+    /** 外部触发立即备份（命令）。 */
     public void requestImmediate(String reason) {
         if (!Config.cfgEnabled) return;
         this.immediateReason = reason;
-        // 唤醒工作线程
-        if (worker != null) worker.interrupt();
+        // 注意：严禁用 interrupt() 唤醒工作线程！
+        // 教训（1.16.5 实测事故）：类是懒加载的，若线程带着中断标志执行 tryBackup，
+        // 类加载器读 jar 字节码时 NIO 通道会抛 ClosedByInterruptException →
+        // NoClassDefFoundError（Error，catch(Exception) 接不住）→ 工作线程静默死亡，
+        // 之后所有手动/定时备份全部失效。工作线程以 500ms 步长轮询 immediateReason。
     }
 
     // ---------- 主循环 ----------
 
     private void loop() {
+        // 预热 ZipUtil：强制提前完成类加载，不依赖首次备份时的懒加载
+        try {
+            Class.forName("com.github.savemysaves.ZipUtil", false, BackupScheduler.class.getClassLoader());
+        } catch (Throwable t) {
+            logError("ZipUtil 预热失败", new Exception(t));
+        }
+
         while (running.get()) {
             try {
-                long now = System.currentTimeMillis();
-
-                boolean should = false;
-                String reason = null;
-
-                if (immediateReason != null) {
-                    reason = immediateReason;
+                String reason = immediateReason;
+                if (reason != null) {
                     immediateReason = null;
-                    should = true;
-                } else if (now >= nextScheduledTime.get()) {
+                } else if (System.currentTimeMillis() >= nextScheduledTime.get()) {
                     reason = "scheduled";
-                    should = true;
                 }
 
-                if (should) {
+                if (reason != null) {
                     tryBackup(reason);
                     // 无论成功与否，重排下一次定时
                     nextScheduledTime.set(System.currentTimeMillis() + Config.cfgIntervalMinutes * 60_000L);
                 }
 
-                long sleep = nextScheduledTime.get() - System.currentTimeMillis();
-                if (sleep > 0) {
-                    Thread.sleep(sleep);
-                }
+                // 短步长轮询代替 interrupt 唤醒：手动请求最多延迟 500ms，开销可忽略
+                long untilNext = nextScheduledTime.get() - System.currentTimeMillis();
+                Thread.sleep(Math.min(500, Math.max(1, untilNext)));
             } catch (InterruptedException e) {
-                // 被唤醒：重新检查是否有立即请求
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                logError("调度器异常", e);
+                // shutdown 唤醒：进入下一轮检查 running 标志后自然退出
+            } catch (Throwable t) {
+                // 必须 catch Throwable：NoClassDefFoundError 等 Error 若逃逸会静默杀死工作线程
+                logError("调度器异常", new Exception(t));
             }
         }
     }
