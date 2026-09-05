@@ -16,9 +16,9 @@ buildscript {
 apply plugin: 'net.minecraftforge.gradle.forge'
 
 // 版本号：mod名 + mc版本 + mod版本（见 .MCMOD.runtime.txt）
-version = "1.8.9-1.0.0"
+version = "1.2.0"
 group = "com.github.savemysaves"
-archivesBaseName = "savemysaves"
+archivesBaseName = "savemysaves-1.8.9"
 
 minecraft {
     version = "1.8.9-11.15.1.2318-1.8.9"
