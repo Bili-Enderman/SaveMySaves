@@ -12,9 +12,9 @@ buildscript {
 apply plugin: 'forge'
 
 // 版本号：mod名 + mc版本 + mod版本（见 .MCMOD.runtime.txt）
-version = "1710-1.0.0"
+version = "1.2.0"
 group = "com.github.savemysaves"
-archivesBaseName = "savemysaves"
+archivesBaseName = "savemysaves-1.7.10"
 
 minecraft {
     version = "1.7.10-10.13.4.1614-1.7.10"
