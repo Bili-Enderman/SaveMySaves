@@ -28,7 +28,7 @@ public class GameEvents {
     /** 每个世界 tick 触发：维护"当前正在游玩的世界"的存档根目录。 */
     @SubscribeEvent
     public void onLevelTick(LevelTickEvent.Pre event) {
-        if (!(event.level instanceof ServerLevel serverLevel)) return;
+        if (!(event.getLevel() instanceof ServerLevel serverLevel)) return;
 
         // 1.16.5 起世界根目录统一走 server.getWorldPath(LevelResource.ROOT)：
         // 单人=saves/<名>，专用服务器=世界根目录。
